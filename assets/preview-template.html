@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ — Design System Preview</title>
+<!--__FONTS__-->
+<style>
+/* ---------- base (generated token CSS below overrides where it overlaps) ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--background); color: var(--on-background, var(--on-surface)); -webkit-font-smoothing: antialiased; }
+img, svg { max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+.c-button-primary, .c-button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: .5em; white-space: nowrap; transition: background-color .15s ease; }
+.c-button-primary.c-button-outline { background: transparent; color: var(--primary); border: var(--border-width, 1px) solid var(--outline); }
+button:disabled, .is-disabled { opacity: .38; cursor: not-allowed; }
+.c-input { border: var(--border-width, 1px) solid var(--outline-variant); width: 100%; min-width: 0; }
+.c-input::placeholder { color: var(--on-surface-variant); opacity: 1; }
+.c-input:focus-visible, .c-input.is-focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: transparent; }
+.c-input.is-error { border-color: var(--error); }
+input.c-checkbox, input.c-radio { appearance: none; -webkit-appearance: none; margin: 0; flex: none; display: inline-grid; place-content: center; }
+input.c-checkbox:not(:checked), input.c-radio:not(:checked) { background-color: transparent; border: 2px solid var(--outline); }
+input.c-checkbox:checked::before { content: ""; width: 11px; height: 11px; background: var(--on-primary); clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
+input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px solid var(--primary); }
+.c-card-nested { display: block; }
+.c-link { text-decoration: underline; text-underline-offset: .2em; }
+
+/* ---------- preview chrome ---------- */
+.pv-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--s-md, 16px); padding: var(--s-sm, 8px) var(--s-lg, 24px); background: color-mix(in srgb, var(--background) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: var(--border-width, 1px) solid var(--outline-variant); }
+.pv-top nav { display: flex; gap: var(--s-md, 16px); overflow-x: auto; margin-left: auto; scrollbar-width: none; }
+.pv-top nav a { text-decoration: none; color: var(--on-surface-variant); white-space: nowrap; }
+.pv-top nav a:hover { color: var(--on-surface); }
+.pv-toggle { background: var(--surface-container); color: var(--on-surface); border-radius: var(--r-full, 999px); padding: 6px 14px; white-space: nowrap; }
+.pv-main { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-lg, 24px) var(--s-3xl, 64px); }
+.pv-section { padding-top: var(--s-3xl, 64px); scroll-margin-top: 56px; }
+.pv-section > header { margin-bottom: var(--s-lg, 24px); max-width: 70ch; }
+.pv-section > header p { color: var(--on-surface-variant); margin: .4em 0 0; }
+.pv-h { margin: 0; }
+.pv-sub { margin: var(--s-xl, 32px) 0 var(--s-md, 16px); color: var(--on-surface); }
+.pv-muted { color: var(--on-surface-variant); }
+.pv-sample { border-radius: var(--r-xl, 24px); overflow: hidden; border: var(--border-width, 1px) solid var(--outline-variant); }
+
+.pv-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s-sm, 8px); }
+.pv-role { border-radius: var(--r-md, 12px); padding: var(--s-md, 16px); min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; border: var(--border-width, 1px) solid var(--outline-variant); }
+.pv-role small { opacity: .85; font-variant-numeric: tabular-nums; }
+.pv-ramp { display: grid; grid-template-columns: 110px repeat(11, 1fr); align-items: stretch; gap: 2px; margin-bottom: 6px; }
+.pv-ramp > span:first-child { align-self: center; color: var(--on-surface-variant); }
+.pv-chip { height: 44px; border-radius: 4px; display: flex; align-items: flex-end; padding: 3px 4px; font-size: 10px; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .pv-ramp { grid-template-columns: repeat(11, 1fr); } .pv-ramp > span:first-child { grid-column: 1 / -1; } .pv-chip { font-size: 0; } }
+
+.pv-type-row { display: grid; grid-template-columns: 220px 1fr; gap: var(--s-lg, 24px); padding: var(--s-md, 16px) 0; border-top: var(--border-width, 1px) solid var(--outline-variant); align-items: baseline; }
+.pv-type-row code { font-size: 12px; color: var(--on-surface-variant); line-height: 1.6; display: block; }
+.pv-type-row p { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .pv-type-row { grid-template-columns: 1fr; gap: 4px; } }
+
+.pv-space { display: grid; grid-template-columns: 90px 1fr; gap: 8px 16px; align-items: center; }
+.pv-space i { display: block; height: 12px; background: var(--primary); border-radius: 2px; }
+.pv-radii { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s-md, 16px); }
+.pv-radius { aspect-ratio: 1.4; background: var(--primary-container, var(--surface-container)); color: var(--on-primary-container, var(--on-surface)); border: var(--border-width, 1px) solid var(--outline-variant); display: flex; align-items: flex-end; padding: 10px; }
+
+.pv-elev-stage { border-radius: var(--r-xl, 24px); padding: var(--s-xl, 32px); display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s-xl, 32px); }
+.pv-elev { border-radius: var(--r-lg, 16px); padding: var(--s-lg, 24px) var(--s-md, 16px); min-height: 130px; display: flex; flex-direction: column; justify-content: space-between; }
+.pv-elev code { font-size: 11px; color: var(--on-surface-variant); word-break: break-word; }
+
+.pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-lg, 24px); }
+.pv-demo { background: var(--surface); border: var(--border-width, 1px) solid var(--outline-variant); border-radius: var(--r-lg, 16px); padding: var(--s-lg, 24px); display: flex; flex-direction: column; gap: var(--s-md, 16px); }
+.pv-demo > h4 { margin: 0; color: var(--on-surface-variant); }
+.pv-row { display: flex; flex-wrap: wrap; gap: var(--s-sm, 8px); align-items: center; }
+.pv-field { display: flex; flex-direction: column; gap: 6px; }
+.pv-field small { color: var(--on-surface-variant); }
+.pv-field small.err { color: var(--error); }
+.pv-check { display: flex; align-items: center; gap: 10px; }
+.pv-alert { border-radius: var(--r-md, 12px); padding: var(--s-sm, 8px) var(--s-md, 16px); }
+.pv-foot { margin-top: var(--s-3xl, 64px); padding-top: var(--s-lg, 24px); border-top: var(--border-width, 1px) solid var(--outline-variant); color: var(--on-surface-variant); }
+
+/* ---------- generated from DESIGN.md frontmatter ---------- */
+/*__CSS__*/
+</style>
+</head>
+<body class="t-body-md">
+<header class="pv-top">
+  <strong class="t-label-lg" id="pv-name"></strong>
+  <nav class="t-label-md" aria-label="Sections">
+    <a href="#sample">Sample</a><a href="#colors">Colors</a><a href="#type">Typography</a>
+    <a href="#shape">Spacing &amp; Shape</a><a href="#elevation">Elevation</a><a href="#components">Components</a>
+  </nav>
+  <button class="pv-toggle t-label-md" id="pv-toggle" type="button"></button>
+</header>
+
+<main class="pv-main">
+  <section class="pv-section" id="sample">
+    <header><h1 class="pv-h t-headline-lg" id="pv-title"></h1><p id="pv-desc"></p></header>
+    <div class="pv-sample backdrop"><!--__SAMPLE__--></div>
+  </section>
+
+  <section class="pv-section" id="colors">
+    <header><h2 class="pv-h t-headline-md">Colors</h2><p>Role colors swap with the theme toggle. Ratios are WCAG contrast of the role against its on-color.</p></header>
+    <div class="pv-roles" id="pv-roles"></div>
+    <h3 class="pv-sub t-headline-sm">Palettes</h3>
+    <div id="pv-palettes"></div>
+  </section>
+
+  <section class="pv-section" id="type">
+    <header><h2 class="pv-h t-headline-md">Typography</h2><p id="pv-fonts"></p></header>
+    <div id="pv-type"></div>
+  </section>
+
+  <section class="pv-section" id="shape">
+    <header><h2 class="pv-h t-headline-md">Spacing &amp; Shape</h2><p id="pv-shape-note"></p></header>
+    <div class="pv-space t-label-md" id="pv-space"></div>
+    <h3 class="pv-sub t-headline-sm">Corner radius</h3>
+    <div class="pv-radii t-label-md" id="pv-radii"></div>
+  </section>
+
+  <section class="pv-section" id="elevation">
+    <header><h2 class="pv-h t-headline-md">Elevation &amp; Depth</h2><p id="pv-elev-note"></p></header>
+    <div class="pv-elev-stage backdrop" id="pv-elev"></div>
+  </section>
+
+  <section class="pv-section" id="components">
+    <header><h2 class="pv-h t-headline-md">Components</h2><p>Every component below is styled only by generated token classes.</p></header>
+    <div class="pv-grid">
+      <div class="pv-demo" data-requires="button-primary">
+        <h4 class="t-label-md">Buttons</h4>
+        <div class="pv-row">
+          <button class="c-button-primary" type="button">Save changes</button>
+          <button class="c-button-primary" type="button" data-force="hover">Hover</button>
+          <button class="c-button-secondary" type="button" data-requires="button-secondary">Secondary</button>
+        </div>
+        <div class="pv-row">
+          <button class="c-button-primary c-button-outline" type="button">Outline</button>
+          <button class="c-button-primary" type="button" disabled>Disabled</button>
+        </div>
+      </div>
+
+      <div class="pv-demo" data-requires="input">
+        <h4 class="t-label-md">Inputs</h4>
+        <label class="pv-field"><span class="t-label-md">Email</span><input class="c-input" placeholder="name@company.com"></label>
+        <label class="pv-field"><span class="t-label-md">Focused</span><input class="c-input is-focus" value="Focus ring uses primary"></label>
+        <label class="pv-field"><span class="t-label-md">With error</span><input class="c-input is-error" value="invalid@"><small class="err t-body-sm">Enter a complete email address.</small></label>
+      </div>
+
+      <div class="pv-demo" data-requires="card">
+        <h4 class="t-label-md">Card &amp; nested card</h4>
+        <div class="c-card" data-elev-of="card">
+          <div class="t-headline-sm">Monthly summary</div>
+          <p class="t-body-sm pv-muted" style="margin:.4em 0 var(--s-md,16px)">Card uses its token radius, padding and elevation.</p>
+          <div class="c-card-nested" data-requires="card-nested">
+            <div class="t-label-md pv-muted">Nested container</div>
+            <div class="t-headline-md">128</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pv-demo" data-requires="checkbox">
+        <h4 class="t-label-md">Selection controls</h4>
+        <label class="pv-check t-body-md"><input type="checkbox" class="c-checkbox" checked> Checked</label>
+        <label class="pv-check t-body-md"><input type="checkbox" class="c-checkbox"> Unchecked</label>
+        <label class="pv-check t-body-md" data-requires="radio"><input type="radio" name="pv-r" class="c-radio" checked> Radio selected</label>
+        <label class="pv-check t-body-md" data-requires="radio"><input type="radio" name="pv-r" class="c-radio"> Radio</label>
+      </div>
+
+      <div class="pv-demo" data-requires="chip">
+        <h4 class="t-label-md">Chips &amp; links</h4>
+        <div class="pv-row"><span class="c-chip">Design</span><span class="c-chip">Tokens</span><span class="c-chip">Preview</span></div>
+        <p class="t-body-md" style="margin:0" data-requires="link">Read the <a class="c-link" href="#colors">color guidance</a> before adding new hues.</p>
+      </div>
+
+      <div class="pv-demo" id="pv-status">
+        <h4 class="t-label-md">Status</h4>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pv-foot t-body-sm">Generated from DESIGN.md. Every value on this page is a token; edit DESIGN.md and rebuild to update.</footer>
+</main>
+
+<script>
+/*__DATA__*/
+(function () {
+  const DS = window.DS, ex = DS.extras || {};
+  const root = document.documentElement;
+  const altPrefix = ex.altMode ? ex.altMode + "-" : null;
+  const palettes = ex.paletteNames || [];
+  const isShade = k => palettes.some(p => k.startsWith(p + "-") && /^\d+$/.test(k.slice(p.length + 1)));
+  const cjk = (ex.fontFamilies || []).some(f => /\b(TC|SC|HK|JP|KR|CJK)\b/.test(f));
+
+  document.getElementById("pv-name").textContent = DS.name;
+  document.getElementById("pv-title").textContent = DS.name;
+  document.getElementById("pv-desc").textContent = DS.description || "";
+
+  // theme toggle
+  const toggle = document.getElementById("pv-toggle");
+  let mode = ex.defaultMode || "light";
+  function setMode(m) {
+    mode = m;
+    if (m === ex.defaultMode) root.removeAttribute("data-theme"); else root.setAttribute("data-theme", m);
+    toggle.textContent = (ex.altMode ? "Switch to " + (m === ex.defaultMode ? ex.altMode : ex.defaultMode) : "Single theme");
+    renderRoles();
+  }
+  toggle.disabled = !ex.altMode;
+  toggle.addEventListener("click", () => ex.altMode && setMode(mode === ex.defaultMode ? ex.altMode : ex.defaultMode));
+
+  // contrast helpers
+  function parse(c) {
+    c = c.trim();
+    if (c.startsWith("#")) { const h = c.length === 4 ? c.slice(1).split("").map(x => x + x).join("") : c.slice(1); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+    const m = c.match(/\d+(\.\d+)?/g); return m ? m.slice(0, 3).map(Number) : [0, 0, 0];
+  }
+  function lum(rgb) { return rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0); }
+  function ratio(a, b) { const x = lum(parse(a)), y = lum(parse(b)); return ((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2); }
+  const cssVar = k => getComputedStyle(root).getPropertyValue("--" + k).trim();
+
+  function renderRoles() {
+    const box = document.getElementById("pv-roles"); box.innerHTML = "";
+    Object.keys(DS.colors).filter(k => !isShade(k) && !(altPrefix && k.startsWith(altPrefix)) && !k.startsWith("on-") && !k.startsWith("inverse-on"))
+      .forEach(k => {
+        const base = k.replace(/-(hover|active|pressed)$/, "");
+        const surfaces = /^(background|surface)/.test(k);
+        const on = DS.colors["on-" + base] ? "on-" + base : (surfaces ? "on-surface" : null);
+        const el = document.createElement("div");
+        el.className = "pv-role t-label-md";
+        el.style.background = `var(--${k})`;
+        const bg = cssVar(k);
+        el.style.color = on ? `var(--${on})` : (lum(parse(bg)) > 0.3 ? "#000" : "#fff");
+        const note = on ? ratio(bg, cssVar(on)) + ":1 vs " + on : ratio(bg, cssVar("background")) + ":1 vs background";
+        el.innerHTML = `<span>${k}</span><small>${bg} · ${note}</small>`;
+        box.appendChild(el);
+      });
+  }
+
+  // palettes
+  const pal = document.getElementById("pv-palettes");
+  palettes.forEach(p => {
+    const row = document.createElement("div"); row.className = "pv-ramp t-label-sm";
+    row.innerHTML = `<span>${p}</span>`;
+    ["50","100","200","300","400","500","600","700","800","900","950"].forEach(s => {
+      const hex = DS.colors[p + "-" + s]; if (!hex) return;
+      const c = document.createElement("div"); c.className = "pv-chip"; c.style.background = hex;
+      c.style.color = lum(parse(hex)) > 0.35 ? "#000" : "#fff"; c.title = `${p}-${s} ${hex}`; c.textContent = s;
+      row.appendChild(c);
+    });
+    pal.appendChild(row);
+  });
+
+  // typography
+  document.getElementById("pv-fonts").textContent = "Families: " + (ex.fontFamilies || []).join(", ");
+  const typeBox = document.getElementById("pv-type");
+  const latin = "Consistent systems make every screen feel related.";
+  const han = "一致的設計語言，讓每個畫面都屬於同一個品牌。";
+  Object.entries(DS.typography).forEach(([k, t]) => {
+    const row = document.createElement("div"); row.className = "pv-type-row";
+    const spec = [t.fontSize, t.lineHeight, t.fontWeight, t.letterSpacing].filter(v => v !== undefined).join(" / ");
+    row.innerHTML = `<div><div class="t-label-md">${k}</div><code>${spec}</code></div>
+      <p class="t-${k}">${latin}${cjk ? "<br>" + han : ""}</p>`;
+    typeBox.appendChild(row);
+  });
+
+  // spacing + radius
+  const sp = document.getElementById("pv-space");
+  Object.entries(DS.spacing || {}).forEach(([k, v]) => {
+    sp.insertAdjacentHTML("beforeend", `<span>${k} · ${v}</span><i style="width:min(${v}, 100%)"></i>`);
+  });
+  const rd = document.getElementById("pv-radii");
+  Object.entries(DS.rounded || {}).forEach(([k, v]) => {
+    const used = Object.entries((ex.shape || {}).radiusKey || {}).filter(([, rk]) => rk === k).map(([c]) => c);
+    rd.insertAdjacentHTML("beforeend", `<div class="pv-radius" style="border-radius:var(--r-${k})"><span>${k} · ${v}${used.length ? "<br><small>" + used.join(", ") + "</small>" : ""}</span></div>`);
+  });
+  const sh = ex.shape || {};
+  document.getElementById("pv-shape-note").textContent =
+    `Corner strategy: ${sh.cornerStrategy || "—"} · Border: ${sh.borderStrategy || "—"} ${sh.borderWidth || ""}`;
+
+  // elevation
+  const el = ex.elevation || {}, levels = Object.keys(el.levels || {});
+  document.getElementById("pv-elev-note").textContent =
+    `Strategy: ${el.strategy || "—"}` + (el.strategy === "glass" ? ` · backdrop blur ${el.backdropBlur} · surface opacity ${el.glassSurfaceAlpha} · border ${el.borderLight}` : "");
+  const stage = document.getElementById("pv-elev");
+  levels.forEach((name, i) => {
+    stage.insertAdjacentHTML("beforeend", `<div class="pv-elev elev-${i + 1}"><span class="t-label-lg">${name}</span><code>${el.strategy === "flat" ? "tonal step: surface-container" : el.strategy === "glow" ? (el.levels[name].glow || {}).css || "" : el.levels[name].light}</code></div>`);
+  });
+
+  // components: elevation classes, forced states, requirement hiding
+  const ce = (ex.shape || {}).componentElevation || {};
+  document.querySelectorAll("[data-elev-of]").forEach(n => {
+    const lv = ce[n.dataset.elevOf]; const idx = levels.indexOf(lv);
+    if (idx >= 0) n.classList.add("elev-" + (idx + 1));
+  });
+  document.querySelectorAll('[data-force="hover"]').forEach(n => {
+    if (DS.components["button-primary-hover"]) n.style.backgroundColor = "var(--primary-hover)"; else n.remove();
+  });
+  document.querySelectorAll("[data-requires]").forEach(n => { if (!DS.components[n.dataset.requires]) n.remove(); });
+
+  // status banners from semantic colors
+  const st = document.getElementById("pv-status");
+  const msgs = { success: "Changes saved.", warning: "Storage is 90% full.", error: "Payment failed. Check the card number.", info: "A new version is available." };
+  let any = false;
+  Object.entries(msgs).forEach(([k, m]) => {
+    if (!DS.colors[k + "-container"]) return; any = true;
+    st.insertAdjacentHTML("beforeend", `<div class="pv-alert t-body-sm" style="background:var(--${k}-container);color:var(--on-${k}-container)"><strong>${k}</strong> — ${m}</div>`);
+  });
+  if (!any) st.remove();
+
+  setMode(mode);
+})();
+</script>
+</body>
+</html>
