@@ -17,19 +17,27 @@ a { color: inherit; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 
-.c-button-primary, .c-button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: .5em; white-space: nowrap; transition: background-color .15s ease; }
+.c-button-primary, .c-button-secondary, .c-button-inverted { display: inline-flex; align-items: center; justify-content: center; gap: .5em; white-space: nowrap; transition: background-color .15s ease, opacity .15s ease; }
+.c-button-secondary:hover:not(:disabled) { background-color: var(--surface-container-high); }
+.c-button-inverted:hover:not(:disabled) { opacity: .88; }
 .c-button-primary.c-button-outline { background: transparent; color: var(--primary); border: var(--border-width, 1px) solid var(--outline); }
 button:disabled, .is-disabled { opacity: .38; cursor: not-allowed; }
-.c-input { border: var(--border-width, 1px) solid var(--outline-variant); width: 100%; min-width: 0; }
+.c-input { border: var(--border-width, 1px) solid var(--outline, var(--outline-variant)); width: 100%; min-width: 0; }
 .c-input::placeholder { color: var(--on-surface-variant); opacity: 1; }
 .c-input:focus-visible, .c-input.is-focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: transparent; }
 .c-input.is-error { border-color: var(--error); }
 input.c-checkbox, input.c-radio { appearance: none; -webkit-appearance: none; margin: 0; flex: none; display: inline-grid; place-content: center; }
 input.c-checkbox:not(:checked), input.c-radio:not(:checked) { background-color: transparent; border: 2px solid var(--outline); }
-input.c-checkbox:checked::before { content: ""; width: 11px; height: 11px; background: var(--on-primary); clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
+/* checked checkbox = solid primary fill (from .c-checkbox), deliberately no check glyph */
 input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px solid var(--primary); }
-.c-card-nested { display: block; }
+.c-card-nested { display: block; border: var(--subcard-border-width, 1px) solid var(--outline-variant); }
 .c-link { text-decoration: underline; text-underline-offset: .2em; }
+input.c-slider { -webkit-appearance: none; appearance: none; width: 100%; height: var(--slider-thumb-size, 24px); margin: 0; background: transparent; --val: 50%; }
+input.c-slider::-webkit-slider-runnable-track { height: var(--slider-track-h, 8px); border-radius: var(--slider-radius, 9999px); background: linear-gradient(to right, var(--primary) var(--val), var(--slider-track-bg, var(--primary-container)) var(--val)); }
+input.c-slider::-moz-range-track { height: var(--slider-track-h, 8px); border-radius: var(--slider-radius, 9999px); background: linear-gradient(to right, var(--primary) var(--val), var(--slider-track-bg, var(--primary-container)) var(--val)); }
+input.c-slider::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); margin-top: calc((var(--slider-track-h, 8px) - var(--slider-thumb-size, 24px)) / 2); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--border-width, 1px) var(--outline-variant); }
+input.c-slider::-moz-range-thumb { box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--border-width, 1px) var(--outline-variant); }
+input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
 
 /* ---------- preview chrome ---------- */
 .pv-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--s-md, 16px); padding: var(--s-sm, 8px) var(--s-lg, 24px); background: color-mix(in srgb, var(--background) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: var(--border-width, 1px) solid var(--outline-variant); }
@@ -74,7 +82,7 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
 .pv-row { display: flex; flex-wrap: wrap; gap: var(--s-sm, 8px); align-items: center; }
 .pv-field { display: flex; flex-direction: column; gap: 6px; }
 .pv-field small { color: var(--on-surface-variant); }
-.pv-field small.err { color: var(--error); }
+.pv-field small.err { color: var(--on-error-container, var(--error)); font-weight: 500; }
 .pv-check { display: flex; align-items: center; gap: 10px; }
 .pv-alert { border-radius: var(--r-md, 12px); padding: var(--s-sm, 8px) var(--s-md, 16px); }
 .pv-foot { margin-top: var(--s-3xl, 64px); padding-top: var(--s-lg, 24px); border-top: var(--border-width, 1px) solid var(--outline-variant); color: var(--on-surface-variant); }
@@ -116,6 +124,11 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
     <div class="pv-space t-label-md" id="pv-space"></div>
     <h3 class="pv-sub t-headline-sm">Corner radius</h3>
     <div class="pv-radii t-label-md" id="pv-radii"></div>
+    <div id="pv-comp-radii-wrap" hidden>
+      <h3 class="pv-sub t-headline-sm">Component radii</h3>
+      <p class="pv-muted t-body-sm" style="margin:0 0 var(--s-md,16px)">Fixed values set per component. They are independent of the scale above by design.</p>
+      <div class="pv-radii t-label-md" id="pv-comp-radii"></div>
+    </div>
   </section>
 
   <section class="pv-section" id="elevation">
@@ -132,6 +145,7 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
           <button class="c-button-primary" type="button">Save changes</button>
           <button class="c-button-primary" type="button" data-force="hover">Hover</button>
           <button class="c-button-secondary" type="button" data-requires="button-secondary">Secondary</button>
+          <button class="c-button-inverted" type="button" data-requires="button-inverted">Inverted</button>
         </div>
         <div class="pv-row">
           <button class="c-button-primary c-button-outline" type="button">Outline</button>
@@ -164,6 +178,12 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
         <label class="pv-check t-body-md"><input type="checkbox" class="c-checkbox"> Unchecked</label>
         <label class="pv-check t-body-md" data-requires="radio"><input type="radio" name="pv-r" class="c-radio" checked> Radio selected</label>
         <label class="pv-check t-body-md" data-requires="radio"><input type="radio" name="pv-r" class="c-radio"> Radio</label>
+      </div>
+
+      <div class="pv-demo" data-requires="slider-track">
+        <h4 class="t-label-md">Slider</h4>
+        <label class="pv-field"><span class="t-label-md">Alert threshold · <output>60</output></span><input type="range" class="c-slider" min="0" max="100" value="60"></label>
+        <label class="pv-field"><span class="t-label-md">Disabled</span><input type="range" class="c-slider" min="0" max="100" value="30" disabled></label>
       </div>
 
       <div class="pv-demo" data-requires="chip">
@@ -203,6 +223,7 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
     if (m === ex.defaultMode) root.removeAttribute("data-theme"); else root.setAttribute("data-theme", m);
     toggle.textContent = (ex.altMode ? "Switch to " + (m === ex.defaultMode ? ex.altMode : ex.defaultMode) : "Single theme");
     renderRoles();
+    renderPalettes();
   }
   toggle.disabled = !ex.altMode;
   toggle.addEventListener("click", () => ex.altMode && setMode(mode === ex.defaultMode ? ex.altMode : ex.defaultMode));
@@ -235,19 +256,23 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
       });
   }
 
-  // palettes
+  // palettes (read from CSS variables so palettes that differ per mode follow the theme toggle)
   const pal = document.getElementById("pv-palettes");
-  palettes.forEach(p => {
-    const row = document.createElement("div"); row.className = "pv-ramp t-label-sm";
-    row.innerHTML = `<span>${p}</span>`;
-    ["50","100","200","300","400","500","600","700","800","900","950"].forEach(s => {
-      const hex = DS.colors[p + "-" + s]; if (!hex) return;
-      const c = document.createElement("div"); c.className = "pv-chip"; c.style.background = hex;
-      c.style.color = lum(parse(hex)) > 0.35 ? "#000" : "#fff"; c.title = `${p}-${s} ${hex}`; c.textContent = s;
-      row.appendChild(c);
+  function renderPalettes() {
+    pal.innerHTML = "";
+    palettes.forEach(p => {
+      const row = document.createElement("div"); row.className = "pv-ramp t-label-sm";
+      row.innerHTML = `<span>${p}</span>`;
+      ["50","100","200","300","400","500","600","700","800","900","950"].forEach(s => {
+        if (!DS.colors[p + "-" + s]) return;
+        const hex = cssVar(p + "-" + s);
+        const c = document.createElement("div"); c.className = "pv-chip"; c.style.background = hex;
+        c.style.color = lum(parse(hex)) > 0.35 ? "#000" : "#fff"; c.title = `${p}-${s} ${hex}`; c.textContent = s;
+        row.appendChild(c);
+      });
+      pal.appendChild(row);
     });
-    pal.appendChild(row);
-  });
+  }
 
   // typography
   document.getElementById("pv-fonts").textContent = "Families: " + (ex.fontFamilies || []).join(", ");
@@ -273,8 +298,17 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
     rd.insertAdjacentHTML("beforeend", `<div class="pv-radius" style="border-radius:var(--r-${k})"><span>${k} · ${v}${used.length ? "<br><small>" + used.join(", ") + "</small>" : ""}</span></div>`);
   });
   const sh = ex.shape || {};
+  const cr = sh.componentRadius || {};
+  if (sh.hybridRadius && Object.keys(cr).length) {
+    document.getElementById("pv-comp-radii-wrap").hidden = false;
+    const box = document.getElementById("pv-comp-radii");
+    Object.entries(cr).forEach(([k, v]) => box.insertAdjacentHTML("beforeend",
+      `<div class="pv-radius" style="border-radius:${v}px"><span>${k} · ${v}px</span></div>`));
+  }
+  const a11y = (ex.meta || {}).a11yStatus;
   document.getElementById("pv-shape-note").textContent =
-    `Corner strategy: ${sh.cornerStrategy || "—"} · Border: ${sh.borderStrategy || "—"} ${sh.borderWidth || ""}`;
+    `Corner strategy: ${sh.cornerStrategy || "—"} · Border: ${sh.borderStrategy || "—"} ${sh.borderWidth || ""}` +
+    (sh.subcardBorderWidth ? ` (nested ${sh.subcardBorderWidth})` : "") + (a11y ? ` · Token a11y: ${a11y}` : "");
 
   // elevation
   const el = ex.elevation || {}, levels = Object.keys(el.levels || {});
@@ -295,6 +329,15 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
     if (DS.components["button-primary-hover"]) n.style.backgroundColor = "var(--primary-hover)"; else n.remove();
   });
   document.querySelectorAll("[data-requires]").forEach(n => { if (!DS.components[n.dataset.requires]) n.remove(); });
+
+  // range sliders: fill follows the value
+  document.querySelectorAll("input.c-slider").forEach(i => {
+    const upd = () => {
+      i.style.setProperty("--val", ((i.value - i.min) / ((i.max - i.min) || 1) * 100) + "%");
+      const o = i.closest("label") && i.closest("label").querySelector("output"); if (o) o.textContent = i.value;
+    };
+    i.addEventListener("input", upd); upd();
+  });
 
   // status banners from semantic colors
   const st = document.getElementById("pv-status");

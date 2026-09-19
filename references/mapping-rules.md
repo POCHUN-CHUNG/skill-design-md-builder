@@ -6,20 +6,31 @@ whose shape differs from the usual Design Token Builder export.
 
 ## 1. Colors
 
+Two source layouts are normalised to the same internal shape `{mode: {palettes, semantic, surface}}`:
+
+| Layout | Palettes | Semantic | Surface roles |
+|---|---|---|---|
+| **mode-first** (current export) | `color.<mode>.<palette>.<shade>` | `color.<mode>.semantic.*` | `color.<mode>.surface.{bg, surface, text, border, btnSecondaryBg, btnInvertedBg}` |
+| **legacy** | `color.<palette>.<shade>` (shared) | `color.semantic.*` (shared) | flat `color.<mode>.{bg, surface, text, border}` |
+
 | Source (DTCG) | DESIGN.md key | Rule |
 |---|---|---|
-| `color.<palette>.{50..950}` | `<palette>-<shade>` | Flattened. Kept so prose and components can point at exact shades. |
-| `color.primary-2` / `primary-3` | `secondary-*` / `tertiary-*` | Renamed when no `secondary`/`tertiary` exists. Override with `--palette-map`. |
-| Palette identical to an earlier one | dropped | Logged as alias (e.g. `accent-2` = `secondary`). Refer to the survivor. |
-| `color.light.bg/surface/text/border` | `background`, `surface`, `on-surface`, `on-background`, `outline-variant` | Default mode, unprefixed. |
-| `color.dark.*` | `dark-background`, `dark-surface`, … | Alternate mode gets the `dark-` prefix (or `light-` when `--default-mode dark`). |
+| `<palette>.{50..950}` | `<palette>-<shade>` | Flattened from the default mode. Kept so prose and components can point at exact shades. If the alternate mode's shades differ, only the differing ones are added as `dark-<palette>-<shade>` (the preview follows the toggle). |
+| `primary-2` / `primary-3` | `secondary-*` / `tertiary-*` | Renamed when no `secondary`/`tertiary` exists. Override with `--palette-map`. |
+| Palette identical to an earlier one **in every mode** | dropped | Logged as alias (e.g. `accent-2` = `secondary`). Refer to the survivor. |
+| default-mode `bg / surface / text / border` | `background`, `surface`, `on-surface`, `on-background`, `outline-variant` | Unprefixed. |
+| alternate-mode surface tokens | `dark-background`, `dark-surface`, … | `dark-` prefix (or `light-` when `--default-mode dark`). |
+| `btnSecondaryBg` | `button-secondary`, `on-button-secondary` | Token value as given; on-color = first of text/background reaching 4.5:1. Drives the `button-secondary` component (in older files without it, that component falls back to `primary-container`). |
+| `btnInvertedBg` | `button-inverted`, `on-button-inverted` | Same rule; drives the `button-inverted` component (inverse-polarity button: dark on light pages, light on dark). |
+| other `surface.*` tokens | kebab-case role of the same name | e.g. `chartGrid` → `chart-grid`. No on-color is generated. |
 | derived | `surface-container-lowest … highest` | Mix of surface toward text (light 3/6/9/12 %, dark 4/7/10/14 %) so containers keep the surface's tint instead of switching to a gray ramp. |
-| derived | `outline`, `on-surface-variant` | Neutral shade that reaches 3:1 (outline) / 4.5:1 (secondary text). |
+| derived | `outline`, `on-surface-variant` | Neutral shade that reaches 3:1 (outline) / 4.5:1 (secondary text). `outline` is the control-boundary color; `outline-variant` is the decorative hairline. |
 | `primary` palette | `primary`, `on-primary`, `primary-hover`, `primary-container`, `on-primary-container` | Light: first of 500→600→700→400→800 whose best on-color is ≥ 4.5:1 and which is ≥ 3:1 against background. Dark: 300→200→400→100. Hover is one shade darker (light) / lighter (dark). Container 100/900 (light), 800/100 (dark). Same for secondary/tertiary. |
-| `color.semantic.*` | `success`, `warning`, `error`, `info` + `on-*`, `*-container`, `on-*-container` | Source palette is found by matching its 500 shade; containers come from that palette. |
+| `semantic.*` | `success`, `warning`, `error`, `info` + `on-*`, `*-container`, `on-*-container` | mode-first: each mode's value is used **as given** (token wins). legacy: light as given, dark derived from a lighter shade of the source palette. Source palette is found by matching its 500 shade; containers come from that palette. A warning is logged when a semantic fill is < 4.5:1 on its surface (fine for fills/icons, not for text). |
 | `link` palette | `link` | First shade ≥ 4.5:1 against background. |
 | alternate mode primaries | `inverse-primary`, `inverse-surface`, `inverse-on-surface` | M3 convention for snackbars / inverted regions. |
 | `appearance.elevation.tintColor` | `shadow-tint` | Added so prose can name the shadow color and the linter's hex check passes. |
+| `meta.a11yStatus` / `a11yFailCount` | `extras.meta` | Shown in the preview; a non-pass status is logged as a warning. |
 
 Role colors are emitted as literal hex with a YAML comment naming their source shade — Stitch's
 own files use literal hex, and the comment keeps traceability.
@@ -85,7 +96,11 @@ tighter; editorial/marketing → looser) and say so in Layout & Spacing.
 ## 5. Elevation (no frontmatter slot → prose + preview)
 
 `extras.elevation` holds strategy, per-level CSS shadow strings for light and dark, border colors,
-backdrop blur and (for glass) the derived surface opacity. Write the exact CSS values into
+backdrop blur and (for glass) the derived surface opacity. Elevation is parametric: when
+`appearance.elevation.levels` is absent, `strategy` / `intensity` / `tintColor` are enough — a 5-step
+ramp is generated (offsetY 1/4/10/16/24px, opacity 0.08→0.20 scaled by `intensity / 0.35`) and logged
+as inferred. `appearance.component.<name>.elevation` (e.g. `card` → `level-1`) is recorded in
+`extras.shape.componentElevation`. Write the exact CSS values into
 `## Elevation & Depth` — AI consumers cannot see extras.json.
 
 | strategy | prose must state | preview renders |
@@ -100,10 +115,15 @@ on dark backgrounds.
 
 ## 6. Components
 
-Generated set: `button-primary`, `button-primary-hover`, `button-secondary` (tonal),
-`input`, `card`, `card-nested`, `checkbox`, `radio`, `chip`, `link`.
+Generated set: `button-primary`, `button-primary-hover`, `button-secondary`, `button-inverted`
+(only with `btnInvertedBg`), `input`, `card`, `card-nested`, `checkbox`, `radio`, `slider-track` +
+`slider-thumb` (only with `component.slider.radius`; track 8px / thumb 24px are inferred), `chip`, `link`.
 Radii come from `appearance.component.*.radius`, card padding from tokens, everything else from the
-spacing scale (logged as inferred). Stick to the common property set — `backgroundColor`,
+spacing scale (logged as inferred). Selection controls: a checked `checkbox` is a **solid `primary` fill with no check
+glyph** (so it has no `textColor`); a selected `radio` keeps a `primary` ring with an inner dot, which is what
+separates the two when `checkboxRadio.radius` makes both near-circular. Borders: `appearance.shape.borderWidth` (all surfaces) and
+`subcardBorderWidth` (nested card) have no frontmatter slot — write them into prose; the preview
+exposes them as `--border-width` / `--subcard-border-width`. Stick to the common property set — `backgroundColor`,
 `textColor`, `typography`, `rounded`, `padding`, `size`, `height`, `width` — unknown properties are
 accepted but warned. Describe borders, focus rings and disabled states in prose.
 
