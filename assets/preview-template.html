@@ -14,17 +14,18 @@ img, svg { max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; border: 0; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 
 .c-button-primary, .c-button-secondary, .c-button-inverted { display: inline-flex; align-items: center; justify-content: center; gap: .5em; white-space: nowrap; transition: background-color .15s ease, opacity .15s ease; }
 .c-button-secondary:hover:not(:disabled) { background-color: var(--surface-container-high); }
 .c-button-inverted:hover:not(:disabled) { opacity: .88; }
-.c-button-primary.c-button-outline { background: transparent; color: var(--primary); border: var(--border-width, 1px) solid var(--outline); }
+.c-button-outlined { display: inline-flex; align-items: center; justify-content: center; gap: .5em; white-space: nowrap; background: transparent; border: var(--control-border-width, 1px) solid var(--outline); transition: background-color .15s ease; }
+.c-button-outlined:hover:not(:disabled) { background-color: var(--surface-container); }
 button:disabled, .is-disabled { opacity: .38; cursor: not-allowed; }
-.c-input { border: var(--border-width, 1px) solid var(--outline, var(--outline-variant)); width: 100%; min-width: 0; }
+.c-input { border: var(--control-border-width, 1px) solid var(--outline, var(--outline-variant)); width: 100%; min-width: 0; }
 .c-input::placeholder { color: var(--on-surface-variant); opacity: 1; }
-.c-input:focus-visible, .c-input.is-focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: transparent; }
+.c-input:focus-visible, .c-input.is-focus { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 1px; border-color: transparent; }
 .c-input.is-error { border-color: var(--error); }
 input.c-checkbox, input.c-radio { appearance: none; -webkit-appearance: none; margin: 0; flex: none; display: inline-grid; place-content: center; }
 input.c-checkbox:not(:checked), input.c-radio:not(:checked) { background-color: transparent; border: 2px solid var(--outline); }
@@ -35,12 +36,12 @@ input.c-radio:checked { box-shadow: inset 0 0 0 4px var(--surface); border: 2px 
 input.c-slider { -webkit-appearance: none; appearance: none; width: 100%; height: var(--slider-thumb-size, 24px); margin: 0; background: transparent; --val: 50%; }
 input.c-slider::-webkit-slider-runnable-track { height: var(--slider-track-h, 8px); border-radius: var(--slider-radius, 9999px); background: linear-gradient(to right, var(--primary) var(--val), var(--slider-track-bg, var(--primary-container)) var(--val)); }
 input.c-slider::-moz-range-track { height: var(--slider-track-h, 8px); border-radius: var(--slider-radius, 9999px); background: linear-gradient(to right, var(--primary) var(--val), var(--slider-track-bg, var(--primary-container)) var(--val)); }
-input.c-slider::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); margin-top: calc((var(--slider-track-h, 8px) - var(--slider-thumb-size, 24px)) / 2); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--border-width, 1px) var(--outline-variant); }
-input.c-slider::-moz-range-thumb { box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--border-width, 1px) var(--outline-variant); }
+input.c-slider::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); margin-top: calc((var(--slider-track-h, 8px) - var(--slider-thumb-size, 24px)) / 2); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--control-border-width, 1px) var(--outline-variant); }
+input.c-slider::-moz-range-thumb { box-sizing: border-box; width: var(--slider-thumb-size, 24px); height: var(--slider-thumb-size, 24px); border-radius: var(--slider-thumb-radius, 9999px); background: var(--slider-thumb-bg, var(--primary)); border: 3px solid var(--surface); box-shadow: 0 0 0 var(--control-border-width, 1px) var(--outline-variant); }
 input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
 
 /* ---------- preview chrome ---------- */
-.pv-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--s-md, 16px); padding: var(--s-sm, 8px) var(--s-lg, 24px); background: color-mix(in srgb, var(--background) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: var(--border-width, 1px) solid var(--outline-variant); }
+.pv-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--s-md, 16px); padding: var(--s-sm, 8px) var(--s-lg, 24px); background: color-mix(in srgb, var(--background) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--outline-variant); }
 .pv-top nav { display: flex; gap: var(--s-md, 16px); overflow-x: auto; margin-left: auto; scrollbar-width: none; }
 .pv-top nav a { text-decoration: none; color: var(--on-surface-variant); white-space: nowrap; }
 .pv-top nav a:hover { color: var(--on-surface); }
@@ -52,17 +53,17 @@ input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
 .pv-h { margin: 0; }
 .pv-sub { margin: var(--s-xl, 32px) 0 var(--s-md, 16px); color: var(--on-surface); }
 .pv-muted { color: var(--on-surface-variant); }
-.pv-sample { border-radius: var(--r-xl, 24px); overflow: hidden; border: var(--border-width, 1px) solid var(--outline-variant); }
+.pv-sample { border-radius: var(--r-xl, 24px); overflow: hidden; border: 1px solid var(--outline-variant); }
 
 .pv-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s-sm, 8px); }
-.pv-role { border-radius: var(--r-md, 12px); padding: var(--s-md, 16px); min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; border: var(--border-width, 1px) solid var(--outline-variant); }
+.pv-role { border-radius: var(--r-md, 12px); padding: var(--s-md, 16px); min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--outline-variant); }
 .pv-role small { opacity: .85; font-variant-numeric: tabular-nums; }
 .pv-ramp { display: grid; grid-template-columns: 110px repeat(11, 1fr); align-items: stretch; gap: 2px; margin-bottom: 6px; }
 .pv-ramp > span:first-child { align-self: center; color: var(--on-surface-variant); }
 .pv-chip { height: 44px; border-radius: 4px; display: flex; align-items: flex-end; padding: 3px 4px; font-size: 10px; font-variant-numeric: tabular-nums; }
 @media (max-width: 720px) { .pv-ramp { grid-template-columns: repeat(11, 1fr); } .pv-ramp > span:first-child { grid-column: 1 / -1; } .pv-chip { font-size: 0; } }
 
-.pv-type-row { display: grid; grid-template-columns: 220px 1fr; gap: var(--s-lg, 24px); padding: var(--s-md, 16px) 0; border-top: var(--border-width, 1px) solid var(--outline-variant); align-items: baseline; }
+.pv-type-row { display: grid; grid-template-columns: 220px 1fr; gap: var(--s-lg, 24px); padding: var(--s-md, 16px) 0; border-top: 1px solid var(--outline-variant); align-items: baseline; }
 .pv-type-row code { font-size: 12px; color: var(--on-surface-variant); line-height: 1.6; display: block; }
 .pv-type-row p { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 720px) { .pv-type-row { grid-template-columns: 1fr; gap: 4px; } }
@@ -70,14 +71,14 @@ input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
 .pv-space { display: grid; grid-template-columns: 90px 1fr; gap: 8px 16px; align-items: center; }
 .pv-space i { display: block; height: 12px; background: var(--primary); border-radius: 2px; }
 .pv-radii { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s-md, 16px); }
-.pv-radius { aspect-ratio: 1.4; background: var(--primary-container, var(--surface-container)); color: var(--on-primary-container, var(--on-surface)); border: var(--border-width, 1px) solid var(--outline-variant); display: flex; align-items: flex-end; padding: 10px; }
+.pv-radius { aspect-ratio: 1.4; background: var(--primary-container, var(--surface-container)); color: var(--on-primary-container, var(--on-surface)); border: 1px solid var(--outline-variant); display: flex; align-items: flex-end; padding: 10px; }
 
 .pv-elev-stage { border-radius: var(--r-xl, 24px); padding: var(--s-xl, 32px); display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s-xl, 32px); }
 .pv-elev { border-radius: var(--r-lg, 16px); padding: var(--s-lg, 24px) var(--s-md, 16px); min-height: 130px; display: flex; flex-direction: column; justify-content: space-between; }
 .pv-elev code { font-size: 11px; color: var(--on-surface-variant); word-break: break-word; }
 
 .pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-lg, 24px); }
-.pv-demo { background: var(--surface); border: var(--border-width, 1px) solid var(--outline-variant); border-radius: var(--r-lg, 16px); padding: var(--s-lg, 24px); display: flex; flex-direction: column; gap: var(--s-md, 16px); }
+.pv-demo { background: var(--surface); border: 1px solid var(--outline-variant); border-radius: var(--r-lg, 16px); padding: var(--s-lg, 24px); display: flex; flex-direction: column; gap: var(--s-md, 16px); }
 .pv-demo > h4 { margin: 0; color: var(--on-surface-variant); }
 .pv-row { display: flex; flex-wrap: wrap; gap: var(--s-sm, 8px); align-items: center; }
 .pv-field { display: flex; flex-direction: column; gap: 6px; }
@@ -85,7 +86,7 @@ input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
 .pv-field small.err { color: var(--on-error-container, var(--error)); font-weight: 500; }
 .pv-check { display: flex; align-items: center; gap: 10px; }
 .pv-alert { border-radius: var(--r-md, 12px); padding: var(--s-sm, 8px) var(--s-md, 16px); }
-.pv-foot { margin-top: var(--s-3xl, 64px); padding-top: var(--s-lg, 24px); border-top: var(--border-width, 1px) solid var(--outline-variant); color: var(--on-surface-variant); }
+.pv-foot { margin-top: var(--s-3xl, 64px); padding-top: var(--s-lg, 24px); border-top: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
 
 /* ---------- generated from DESIGN.md frontmatter ---------- */
 /*__CSS__*/
@@ -148,7 +149,7 @@ input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
           <button class="c-button-inverted" type="button" data-requires="button-inverted">Inverted</button>
         </div>
         <div class="pv-row">
-          <button class="c-button-primary c-button-outline" type="button">Outline</button>
+          <button class="c-button-outlined" type="button" data-requires="button-outlined">Outlined</button>
           <button class="c-button-primary" type="button" disabled>Disabled</button>
         </div>
       </div>
@@ -156,7 +157,7 @@ input.c-slider:disabled { opacity: .38; cursor: not-allowed; }
       <div class="pv-demo" data-requires="input">
         <h4 class="t-label-md">Inputs</h4>
         <label class="pv-field"><span class="t-label-md">Email</span><input class="c-input" placeholder="name@company.com"></label>
-        <label class="pv-field"><span class="t-label-md">Focused</span><input class="c-input is-focus" value="Focus ring uses primary"></label>
+        <label class="pv-field"><span class="t-label-md">Focused</span><input class="c-input is-focus" value="Focus ring"></label>
         <label class="pv-field"><span class="t-label-md">With error</span><input class="c-input is-error" value="invalid@"><small class="err t-body-sm">Enter a complete email address.</small></label>
       </div>
 

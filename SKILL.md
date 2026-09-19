@@ -34,9 +34,27 @@ Use a scratch dir such as `work/` for intermediate files.
    ```
    Options: `--default-mode dark` when references are dark-first; `--spacing-base 8` for 8pt
    systems; `--palette-map '{"accent-1":"secondary"}'` to override role assignment.
+   `--accept "contrast:secondary/on-secondary,border-conflict"` records deviations **the user has said
+   are deliberate** (contrast pairs are matched per role, light and dark together). Accepted items move from
+   Warnings to an "Accepted by the user" section of the report and are not flagged again by the linter;
+   still write them into DESIGN.md as explicit rules. Never pass `--accept` on your own judgement.
    Read `work/report.md` fully. It lists repaired references, dropped duplicate palettes,
    **inferred values** and **warnings** about the source tokens. Read
    `references/mapping-rules.md` if any mapping needs explaining or overriding.
+
+   Two color layouts are supported and auto-detected (the report states which one it saw):
+   **mode-first** (current Design Token Builder export: `color.<mode>.<palette>.<shade>`,
+   `color.<mode>.semantic.*`, `color.<mode>.surface.{bg,surface,surfaceRaised,text,textMuted,textInverted,border,borderStrong,btnSecondaryBg,btnInvertedBg,btnOutlinedText}`,
+   optional `color.<mode>.<palette>.on`)
+   and the older **legacy** layout (palettes at `color.<palette>`, flat `color.<mode>.bg/text/...`).
+   If `report.md` shows 0 palettes or surprising fallback colors, the token file has a shape the
+   converter does not know — stop and fix the converter rather than writing prose around it.
+   Explicit tokens win over derivation: dark-mode semantic colors, `btnSecondaryBg` and
+   `btnInvertedBg` are used as given (roles `button-secondary`, `button-inverted` + `on-*`).
+   The same holds for palette `on`, `textMuted`, `borderStrong`, `textInverted`, `btnOutlinedText` and
+   `surfaceRaised`. `borderStrategy: none` removes decorative borders only; controls keep a 1px `outline`
+   edge (see mapping-rules §5). Write these rules into the prose, and repeat any conflict the report lists
+   (for example `requiresBorder` versus `borderStrategy: none`) instead of resolving it silently.
 
    Some token files use a **hybrid radius system**: a global `rounded` scale exists alongside
    independent hard-coded per-component radii that don't match the scale's steps. The converter
@@ -72,9 +90,9 @@ Use a scratch dir such as `work/` for intermediate files.
 
 5. **Lint until clean.**
    ```bash
-   python scripts/lint_design_md.py DESIGN.md
+   python scripts/lint_design_md.py DESIGN.md --extras work/extras.json
    ```
-   Fix every ERROR (structure, broken references, prose hex not in frontmatter, contrast below
+   (`--extras` lets the linter honor the contrast pairs accepted in step 2.) Fix every ERROR (structure, broken references, prose hex not in frontmatter, contrast below
    4.5:1, leftover placeholders). Read WARNs and fix those that are real.
 
 6. **Write the sample fragment and build the preview.**
@@ -126,7 +144,8 @@ Section guide:
 - **Brand & Style** — who it's for, the emotional target, the archetype, and 2–3 signature traits
   that make it recognizable (e.g. "translucent glass panels over muted tinted backdrops"). Mention
   the default color mode.
-- **Colors** — role-by-role usage: primary / secondary / tertiary, surfaces and containers
+- **Colors** — role-by-role usage: primary / secondary / tertiary, button surfaces (`button-secondary`,
+  `button-inverted` when present), surfaces and containers
   (which container for which layer), outline vs outline-variant, semantic colors, link. State the
   proportion (e.g. neutrals ~80–90% of area, primary for actions and key data only). Describe the
   alternate mode and the `dark-*` keys. Note that palettes (`primary-50…950`) exist for charts
@@ -139,13 +158,18 @@ Section guide:
 - **Layout & Spacing** — grid (columns, gutter, margin, max content width), spacing scale usage
   (which steps for component internals vs between sections), density, breakpoints.
 - **Elevation & Depth** — the strategy and exact values: each level's shadow CSS, blur, surface
-  opacity, border — all from `extras.json`. Say which level each component uses and the dark-mode
+  opacity, border — all from `extras.json`. (When the tokens omit `levels`, the converter derives a
+  5-step ramp from `intensity` and logs it as inferred — say so.) Say which level each component uses and the dark-mode
   treatment. For glass: needs a tinted backdrop, never glass-on-glass beyond one level.
 - **Shapes** — cornerStrategy in plain words; which rounded key each component uses; concentric
   radius rule for nested containers; when `full` is allowed.
 - **Components** — for each component: anatomy, token references, and states (default, hover,
-  focus-visible ring, active, disabled at 38% opacity, error). Include components the references
-  show that the script did not generate (nav bar, table, tabs, modal…), built from existing tokens.
+  focus-visible ring, active, disabled at 38% opacity, error). Cover every generated component
+  (buttons incl. secondary/inverted/outlined, input, card, nested card with its `subcardBorderWidth`, checkbox,
+  radio, slider, chip, link) and state when to choose inverted over primary. Include components the
+  references show that the script did not generate (nav bar, table, tabs, modal…), built from
+  existing tokens. Semantic fills that fail 4.5:1 on the surface (report warning) are not text
+  colors: say that status text uses `on-*-container` on `*-container`.
 - **Media Adaptation** — the user uses this file for slides, images and social cards too, and
   those consumers otherwise fall back to generic styling. Give concrete translations:
   slides (16:9, which type levels scale up and by how much, one idea per slide, background
@@ -173,6 +197,9 @@ of *their* product:
   in dark mode. Use shades only for things that should look identical in both modes.
 - Show the signature traits: the elevation strategy on real cards, the primary action, at least
   one input or control, and type hierarchy from display down to label.
+- Extra generated hooks: `.c-button-secondary`, `.c-button-inverted`, `.c-card-nested` (already carries
+  the subcard hairline), and `<input type="range" class="c-slider">` (styled from `slider-track` /
+  `slider-thumb`; put the current value in an `<output>` inside its `<label>` and it updates).
 - Responsive to ~360px; prefix local classes with `sp-` to avoid clashing with preview chrome.
 
 ## Things to avoid

@@ -10,7 +10,7 @@ Two source layouts are normalised to the same internal shape `{mode: {palettes, 
 
 | Layout | Palettes | Semantic | Surface roles |
 |---|---|---|---|
-| **mode-first** (current export) | `color.<mode>.<palette>.<shade>` | `color.<mode>.semantic.*` | `color.<mode>.surface.{bg, surface, text, border, btnSecondaryBg, btnInvertedBg}` |
+| **mode-first** (current export) | `color.<mode>.<palette>.<shade>` (+ optional `.on`) | `color.<mode>.semantic.*` | `color.<mode>.surface.{bg, surface, surfaceRaised, text, textMuted, textInverted, border, borderStrong, btnSecondaryBg, btnInvertedBg, btnOutlinedText}` |
 | **legacy** | `color.<palette>.<shade>` (shared) | `color.semantic.*` (shared) | flat `color.<mode>.{bg, surface, text, border}` |
 
 | Source (DTCG) | DESIGN.md key | Rule |
@@ -21,19 +21,28 @@ Two source layouts are normalised to the same internal shape `{mode: {palettes, 
 | default-mode `bg / surface / text / border` | `background`, `surface`, `on-surface`, `on-background`, `outline-variant` | Unprefixed. |
 | alternate-mode surface tokens | `dark-background`, `dark-surface`, … | `dark-` prefix (or `light-` when `--default-mode dark`). |
 | `btnSecondaryBg` | `button-secondary`, `on-button-secondary` | Token value as given; on-color = first of text/background reaching 4.5:1. Drives the `button-secondary` component (in older files without it, that component falls back to `primary-container`). |
+| `surfaceRaised` | `surface-raised` | Token value as given. Used as the nested-card background (inferred: the tokens do not name the component). |
+| `textMuted` | `on-surface-variant` | Token wins over the derived neutral shade. |
+| `borderStrong` | `outline` | Token wins. The control-boundary color (input, outlined button, unchecked checkbox/radio). |
+| `textInverted` | `on-button-inverted` | Token wins over the derived on-color. |
+| `btnOutlinedText` | `button-outlined-text` | Label color of the `button-outlined` component (falls back to `primary` when absent). |
 | `btnInvertedBg` | `button-inverted`, `on-button-inverted` | Same rule; drives the `button-inverted` component (inverse-polarity button: dark on light pages, light on dark). |
 | other `surface.*` tokens | kebab-case role of the same name | e.g. `chartGrid` → `chart-grid`. No on-color is generated. |
-| derived | `surface-container-lowest … highest` | Mix of surface toward text (light 3/6/9/12 %, dark 4/7/10/14 %) so containers keep the surface's tint instead of switching to a gray ramp. |
-| derived | `outline`, `on-surface-variant` | Neutral shade that reaches 3:1 (outline) / 4.5:1 (secondary text). `outline` is the control-boundary color; `outline-variant` is the decorative hairline. |
-| `primary` palette | `primary`, `on-primary`, `primary-hover`, `primary-container`, `on-primary-container` | Light: first of 500→600→700→400→800 whose best on-color is ≥ 4.5:1 and which is ≥ 3:1 against background. Dark: 300→200→400→100. Hover is one shade darker (light) / lighter (dark). Container 100/900 (light), 800/100 (dark). Same for secondary/tertiary. |
-| `semantic.*` | `success`, `warning`, `error`, `info` + `on-*`, `*-container`, `on-*-container` | mode-first: each mode's value is used **as given** (token wins). legacy: light as given, dark derived from a lighter shade of the source palette. Source palette is found by matching its 500 shade; containers come from that palette. A warning is logged when a semantic fill is < 4.5:1 on its surface (fine for fills/icons, not for text). |
+| derived | `surface-container-lowest … highest` | `low…highest` mix the surface toward text (light 3/6/9/12 %, dark 4/7/10/14 %) so containers keep the surface's tint. `lowest` is the extreme end of the ramp: the page background (dark: slightly darker) normally, but the **surface itself** when it already lies beyond the background (white cards on a gray page, black cards on a dark-gray page) — this keeps the ramp monotonic. |
+| derived (only without `borderStrong` / `textMuted`) | `outline`, `on-surface-variant` | Neutral shade that reaches 3:1 (outline) / 4.5:1 (secondary text). `outline` is the control-boundary color; `outline-variant` (`border`) is the decorative hairline. |
+| `<palette>.on` | `on-primary` / `on-secondary` / `on-tertiary` | Explicit pairing from the tokens: the role fill is then the palette's **500** and the label color is `on` as given (no contrast-driven shade search; hover = one step darker/lighter; container 100/900 light, 800/100 dark). Contrast below 4.5:1 is reported, not fixed. `on` of other palettes (neutral, link, accent-*) is read but not turned into roles. Without `.on` the derived search below applies. |
+| `primary` palette (no `.on`) | `primary`, `on-primary`, `primary-hover`, `primary-container`, `on-primary-container` | Light: first of 500→600→700→400→800 whose best on-color is ≥ 4.5:1 and which is ≥ 3:1 against background. Dark: 300→200→400→100. Hover is one shade darker (light) / lighter (dark). Container 100/900 (light), 800/100 (dark). Same for secondary/tertiary. |
+| `semantic.*` | `success`, `warning`, `error`, `info` + `on-*`, `*-container`, `on-*-container` | mode-first: each mode's value is used **as given** (token wins). legacy: light as given, dark derived from a lighter shade of the source palette. Source palette is found by matching its 500 shade; containers come from that palette. A warning is logged when a semantic fill is < 4.5:1 on its surface (fine for fills/icons, not for text). Semantic colors without a matching palette shade get **derived containers**: the color tinted into the surface (14 % light / 28 % dark) with an on-color mixed toward text (≥ 4.5:1), logged as inferred. |
 | `link` palette | `link` | First shade ≥ 4.5:1 against background. |
+| derived | `focus-ring` | First of `primary`, `link`, `on-surface` that is ≥ 3:1 against both background and surface (a deep primary that is invisible on dark surfaces falls back to `link`). Use it for focus-visible rings and for accent strokes/text that must stay visible on dark surfaces. |
 | alternate mode primaries | `inverse-primary`, `inverse-surface`, `inverse-on-surface` | M3 convention for snackbars / inverted regions. |
 | `appearance.elevation.tintColor` | `shadow-tint` | Added so prose can name the shadow color and the linter's hex check passes. |
 | `meta.a11yStatus` / `a11yFailCount` | `extras.meta` | Shown in the preview; a non-pass status is logged as a warning. |
 
 Role colors are emitted as literal hex with a YAML comment naming their source shade — Stitch's
 own files use literal hex, and the comment keeps traceability.
+
+**Accepted deviations.** `--accept` (converter) and `--extras` (linter) let a user-declared, deliberate deviation stand: `contrast:<role>/<on-role>` (both modes at once) and `border-conflict` (`requiresBorder` with `borderStrategy: none`). They are listed in the report under "Accepted by the user" and must be written into DESIGN.md as rules.
 
 ## 2. Typography
 
@@ -43,6 +52,8 @@ own files use literal hex, and the comment keeps traceability.
 - `{value, unit}` → `44px`, `-0.025em`. Unitless line-height stays a number (spec recommendation).
 - Checks: sizes strictly decreasing inside `headline-*`, `body-*`, `label-*`; same size used by different
   roles is flagged as a hierarchy collision. Report — don't silently change the user's scale.
+
+Sizes below 12px trigger a readability warning.
 
 ## 3. Rounded
 
@@ -100,7 +111,9 @@ backdrop blur and (for glass) the derived surface opacity. Elevation is parametr
 `appearance.elevation.levels` is absent, `strategy` / `intensity` / `tintColor` are enough — a 5-step
 ramp is generated (offsetY 1/4/10/16/24px, opacity 0.08→0.20 scaled by `intensity / 0.35`) and logged
 as inferred. `appearance.component.<name>.elevation` (e.g. `card` → `level-1`) is recorded in
-`extras.shape.componentElevation`. Write the exact CSS values into
+`extras.shape.componentElevation`.
+
+**Border strategy.** `borderStrategy: none` (or `borderWidth: 0`) removes the *decorative* borders — card edge, nested card, glass edge, dividers (`--border-width` / `--subcard-border-width` = 0 in the preview). Controls keep a 1px `outline` (`borderStrong`) edge (`--control-border-width`) because inputs, outlined buttons and unchecked checkbox/radio are invisible otherwise; this is logged as inferred. When `elevation.requiresBorder` is true for glass, a conflict warning is raised and the shape setting wins. Write the exact CSS values into
 `## Elevation & Depth` — AI consumers cannot see extras.json.
 
 | strategy | prose must state | preview renders |

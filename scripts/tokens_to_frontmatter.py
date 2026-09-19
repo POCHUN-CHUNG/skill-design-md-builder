@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from colorlib import best_on_color, contrast, looks_similar, norm_hex, rgba  # noqa: E402
+from colorlib import luminance, best_on_color, contrast, looks_similar, norm_hex, rgba  # noqa: E402
 
 REF_RE = re.compile(r"^\{([^{}]+)\}$")
 SHADE_KEYS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"]
@@ -30,6 +30,7 @@ class Log:
     def __init__(self):
         self.fixed_refs, self.aliases, self.roles = [], [], []
         self.inferred, self.warnings, self.errors = [], [], []
+        self.accepted = []          # deviations the user declared deliberate (--accept)
 
 
 LOG = Log()
@@ -140,8 +141,12 @@ def kebab(s):
     return re.sub(r"(?<!^)(?=[A-Z])", "-", s).lower()
 
 
+PALETTE_EXTRA = {"on"}   # non-shade token allowed inside a palette group: the explicit on-color of its fill
+
+
 def _is_palette(kids):
-    return bool(kids) and all(k in SHADE_KEYS for k in kids)
+    return (bool(kids) and any(k in SHADE_KEYS for k in kids)
+            and all(k in SHADE_KEYS or k in PALETTE_EXTRA for k in kids))
 
 
 def _hex_group(root, node, ctx):
@@ -152,19 +157,22 @@ def _hex_group(root, node, ctx):
 def parse_color_tree(root):
     """Normalise the supported color layouts to {mode: {palettes, semantic, surface}}.
 
-    mode-first : color.<mode>.<palette>.<shade>, color.<mode>.semantic.*, color.<mode>.surface.*
+    mode-first : color.<mode>.<palette>.<shade> (+ optional .on), color.<mode>.semantic.*, color.<mode>.surface.*
                  (current Design Token Builder export; every mode is self-contained)
     legacy     : color.<palette>.<shade>, color.semantic.*, color.<mode>.<bg|surface|text|border> flat
     Returns (modes, singles, layout).
     """
     cnode = root.get("color") or root.get("colors") or {}
-    top_pal, top_sem, mode_nodes, singles = {}, {}, {}, {}
+    top_pal, top_sem, mode_nodes, singles, top_on = {}, {}, {}, {}, {}
     for key, node in children(cnode).items():
         kids = children(node)
         if is_token(node):
             singles[key] = norm_hex(resolve_ref(root, node["$value"], f"color.{key}"))
         elif _is_palette(kids):
-            top_pal[key] = _hex_group(root, node, f"color.{key}")
+            grp = _hex_group(root, node, f"color.{key}")
+            if "on" in grp:
+                top_on[key] = grp.pop("on")
+            top_pal[key] = grp
         elif key in ("light", "dark"):
             mode_nodes[key] = node
         elif key == "semantic":
@@ -175,13 +183,16 @@ def parse_color_tree(root):
 
     modes, layout = {}, "legacy"
     for mode, node in mode_nodes.items():
-        pal, sem, surf = {}, {}, {}
+        pal, sem, surf, pon = {}, {}, {}, {}
         for k, v in children(node).items():
             ctx, kids = f"color.{mode}.{k}", children(v)
             if is_token(v):                       # legacy flat surface token (bg / text / ...)
                 surf[k] = norm_hex(resolve_ref(root, v["$value"], ctx))
             elif _is_palette(kids):
-                pal[k], layout = _hex_group(root, v, ctx), "mode-first"
+                grp, layout = _hex_group(root, v, ctx), "mode-first"
+                if "on" in grp:
+                    pon[k] = grp.pop("on")
+                pal[k] = grp
             elif k == "semantic":
                 sem, layout = _hex_group(root, v, ctx), "mode-first"
             elif k == "surface":
@@ -190,9 +201,10 @@ def parse_color_tree(root):
             else:                                  # unknown group -> flatten into surface roles
                 for p, tok, _ in walk(v, (k,)):
                     surf["-".join(p)] = norm_hex(resolve_ref(root, tok["$value"], f"color.{mode}." + ".".join(p)))
-        modes[mode] = {"palettes": pal or dict(top_pal), "semantic": sem or dict(top_sem), "surface": surf}
+        modes[mode] = {"palettes": pal or dict(top_pal), "palette_on": pon or dict(top_on),
+                       "semantic": sem or dict(top_sem), "surface": surf}
     if not modes:
-        modes["light"] = {"palettes": top_pal, "semantic": top_sem, "surface": {}}
+        modes["light"] = {"palettes": top_pal, "palette_on": top_on, "semantic": top_sem, "surface": {}}
     return modes, singles, layout
 
 
@@ -212,12 +224,14 @@ def collect_colors(root, palette_map):
             LOG.aliases.append(f"Palette `{k}` renamed to `{rename[k]}` (semantic role naming)")
     for m in modes.values():
         m["palettes"] = {rename.get(k, k): v for k, v in m["palettes"].items()}
+        m["palette_on"] = {rename.get(k, k): v for k, v in m.get("palette_on", {}).items()}
 
     # dedupe palettes that are identical in EVERY mode (keep first in document order)
     ordered = list(dict.fromkeys(rename.get(k, k) for k in names))
     seen, drop = {}, set()
     for k in ordered:
-        sig = tuple(tuple(m["palettes"].get(k, {}).get(s) for s in SHADE_KEYS) for m in modes.values())
+        sig = tuple(tuple(m["palettes"].get(k, {}).get(s) for s in SHADE_KEYS) + (m["palette_on"].get(k),)
+                    for m in modes.values())
         if sig in seen:
             drop.add(k)
             LOG.aliases.append(f"Palette `{k}` is identical to `{seen[sig]}` in every mode → dropped, use `{seen[sig]}-*`")
@@ -225,6 +239,7 @@ def collect_colors(root, palette_map):
             seen[sig] = k
     for m in modes.values():
         m["palettes"] = {k: v for k, v in m["palettes"].items() if k not in drop}
+        m["palette_on"] = {k: v for k, v in m["palette_on"].items() if k not in drop}
 
     # semantic colors: find the source palette per mode (matched by the 500 shade)
     sem_src = {}
@@ -272,12 +287,40 @@ def first_ok(bg, cands, min_ratio=4.5):
     return best_on_color(bg, cands)
 
 
-SURFACE_KNOWN = {"bg", "surface", "text", "border", "btnSecondaryBg", "btnInvertedBg"}
+def norm_pair(x, y):
+    """Contrast pairs are accepted per role, not per mode: `dark-secondary/dark-on-secondary` -> `secondary/on-secondary`."""
+    strip = lambda k: re.sub(r"^(dark|light)-", "", k)  # noqa: E731
+    return f"{strip(x)}/{strip(y)}"
+
+
+def note_once(bucket, msg):
+    if msg not in bucket:
+        bucket.append(msg)
+
+
+def derive_container(hexv, surface, text, light):
+    """Tonal container + its on-color for a semantic color that has no source palette."""
+    cont = mix(surface, hexv, 0.14 if light else 0.28)
+    on = mix(hexv, text, 0.78)
+    if contrast(cont, on) < 4.5:
+        on = text
+    return cont, on
+
+
+# Surface tokens the converter understands. Explicit token values always win over derivation.
+#   bg surface text border            -> background, surface, on-surface, outline-variant
+#   surfaceRaised                     -> surface-raised
+#   textMuted / borderStrong          -> on-surface-variant / outline
+#   btnSecondaryBg btnInvertedBg      -> button-secondary / button-inverted (+ on-*)
+#   textInverted                      -> on-button-inverted
+#   btnOutlinedText                   -> button-outlined-text
+SURFACE_KNOWN = {"bg", "surface", "text", "border", "surfaceRaised", "textMuted", "borderStrong",
+                 "btnSecondaryBg", "btnInvertedBg", "textInverted", "btnOutlinedText"}
 
 
 def build_roles(mode, modes, sem_src, layout):
     md = modes.get(mode) or next(iter(modes.values()))
-    palettes, semantic = md["palettes"], md["semantic"]
+    palettes, semantic, pal_on = md["palettes"], md["semantic"], md.get("palette_on", {})
     m = modes.get(mode, {}).get("surface", {})
     light = mode == "light"
     explicit_sem = layout == "mode-first"
@@ -298,22 +341,38 @@ def build_roles(mode, modes, sem_src, layout):
     put("surface", surface, sp + "surface")
     put("on-surface", text, sp + "text")
     steps = (0.03, 0.06, 0.09, 0.12) if light else (0.04, 0.07, 0.10, 0.14)
-    put("surface-container-lowest", bg if light else mix(bg, "#000000", 0.25), "derived")
+    # `lowest` is the extreme end of the tonal ramp. When the surface already sits beyond the page
+    # background in that direction (white cards on a gray page, black cards on a dark-gray page),
+    # the surface itself is the extreme; otherwise it is the page background (dark: darkened a bit).
+    if light:
+        lowest, lsrc = (surface, "surface (lighter than background)") if luminance(surface) > luminance(bg) else (bg, "background")
+    else:
+        lowest, lsrc = (surface, "surface (darker than background)") if luminance(surface) < luminance(bg) else (mix(bg, "#000000", 0.25), "derived")
+    put("surface-container-lowest", lowest, lsrc)
     put("surface-container-low", mix(surface, text, steps[0]), f"mix(surface, text, {steps[0]})")
     put("surface-container", mix(surface, text, steps[1]), f"mix(surface, text, {steps[1]})")
     put("surface-container-high", mix(surface, text, steps[2]), f"mix(surface, text, {steps[2]})")
     put("surface-container-highest", mix(surface, text, steps[3]), f"mix(surface, text, {steps[3]})")
+    if m.get("surfaceRaised"):
+        put("surface-raised", m["surfaceRaised"], sp + "surfaceRaised")
     if border:
         put("outline-variant", border, sp + "border")
-    if neutral:
+
+    # outline (control boundary) and secondary text: token wins, otherwise a neutral shade reaching 3:1 / 4.5:1
+    if m.get("borderStrong"):
+        put("outline", m["borderStrong"], sp + "borderStrong")
+    elif neutral:
         order = ["500", "600", "700"] if light else ["500", "400", "300"]
         s, c, _ = pick_shade(neutral, bg, order, need_bg=3.0)
         put("outline", c, f"neutral-{s} (≥3:1 vs background)")
+    if m.get("textMuted"):
+        put("on-surface-variant", m["textMuted"], sp + "textMuted")
+    elif neutral:
         order = ["600", "700", "800"] if light else ["400", "300", "200"]
         s, c, _ = pick_shade(neutral, surface, order, need_bg=4.5)
         put("on-surface-variant", c, f"neutral-{s} (≥4.5:1 vs surface)")
 
-    # explicit button surfaces from the token file (btnSecondaryBg / btnInvertedBg) - token wins
+    # explicit button surfaces from the token file - token wins
     sec, inv = m.get("btnSecondaryBg"), m.get("btnInvertedBg")
     if sec:
         put("button-secondary", sec, sp + "btnSecondaryBg")
@@ -321,8 +380,13 @@ def build_roles(mode, modes, sem_src, layout):
         put("on-button-secondary", on, f"first of text/background reaching 4.5:1 ({contrast(sec, on)}:1)")
     if inv:
         put("button-inverted", inv, sp + "btnInvertedBg")
-        on = first_ok(inv, [bg, text, "#ffffff"])
-        put("on-button-inverted", on, f"first of background/text reaching 4.5:1 ({contrast(inv, on)}:1)")
+        if m.get("textInverted"):
+            put("on-button-inverted", m["textInverted"], sp + "textInverted")
+        else:
+            on = first_ok(inv, [bg, text, "#ffffff"])
+            put("on-button-inverted", on, f"first of background/text reaching 4.5:1 ({contrast(inv, on)}:1)")
+    if m.get("btnOutlinedText"):
+        put("button-outlined-text", m["btnOutlinedText"], sp + "btnOutlinedText")
     for k, v in m.items():                          # any other surface token -> its own kebab-case role
         if k not in SURFACE_KNOWN:
             put(kebab(k), v, sp + k)
@@ -333,10 +397,18 @@ def build_roles(mode, modes, sem_src, layout):
         pal = palettes.get(role)
         if not pal:
             continue
-        s, c, on = pick_shade(pal, bg, fill_order, need_bg=3.0,
-                              on_cands=on_cands + [pal.get("950", text), pal.get("50", bg)])
-        put(role, c, f"{role}-{s}")
-        put(f"on-{role}", on, f"best contrast vs {role} ({contrast(c, on)}:1)")
+        if pal_on.get(role) and "500" in pal:
+            # explicit pairing from the tokens: fill = the palette's 500, label = its `on` (token wins)
+            s, c, on = "500", pal["500"], pal_on[role]
+            put(role, c, f"{role}-500 (explicit palette `on`)")
+            put(f"on-{role}", on, f"color.{mode}.{role}.on ({contrast(c, on)}:1)")
+            note_once(LOG.aliases, "Primary/secondary/tertiary fills use shade 500 with the palette's explicit `on` color "
+                                   "(no contrast-driven shade search) because the tokens define the pairing.")
+        else:
+            s, c, on = pick_shade(pal, bg, fill_order, need_bg=3.0,
+                                  on_cands=on_cands + [pal.get("950", text), pal.get("50", bg)])
+            put(role, c, f"{role}-{s}")
+            put(f"on-{role}", on, f"best contrast vs {role} ({contrast(c, on)}:1)")
         i = SHADE_KEYS.index(s) + (1 if light else -1)
         if 0 <= i < len(SHADE_KEYS) and SHADE_KEYS[i] in pal:
             put(f"{role}-hover", pal[SHADE_KEYS[i]], f"{role}-{SHADE_KEYS[i]} (one step {'darker' if light else 'lighter'})")
@@ -346,7 +418,9 @@ def build_roles(mode, modes, sem_src, layout):
             put(f"{role}-container", cont, f"{role}-{'100' if light else '800'}")
             put(f"on-{role}-container", oncont, f"{role}-{'900' if light else '100'}")
 
-    # semantic: explicit per-mode values are used as given; legacy files derive lighter dark shades
+    # semantic: explicit per-mode values are used as given; legacy files derive lighter dark shades.
+    # When no palette matches (500 shade), containers are derived by tinting the surface.
+    derived_cont = []
     for name, hexv in semantic.items():
         pal = palettes.get(sem_src.get(mode, {}).get(name) or "", {})
         if light or not pal or explicit_sem:
@@ -362,12 +436,25 @@ def build_roles(mode, modes, sem_src, layout):
             ck, ok = ("100", "900") if light else ("900", "100")
             put(f"{name}-container", pal[ck], f"{sem_src[mode][name]}-{ck}")
             put(f"on-{name}-container", pal[ok], f"{sem_src[mode][name]}-{ok}")
+        else:
+            cont, oncont = derive_container(c, surface, text, light)
+            put(f"{name}-container", cont, f"derived: {name} tinted into surface")
+            put(f"on-{name}-container", oncont, f"derived: {name} mixed toward text ({contrast(cont, oncont)}:1)")
+            derived_cont.append(name)
+    if derived_cont:
+        note_once(LOG.inferred, "Semantic colors without a matching palette shade (" + ", ".join(derived_cont) +
+                  ") got derived `*-container` / `on-*-container` roles (color tinted into the surface, 14% light / 28% dark).")
 
     link = palettes.get("link")
     if link:
         order = ["500", "600", "700"] if light else ["300", "200", "400"]
         s, c, _ = pick_shade(link, bg, order, need_bg=4.5)
         put("link", c, f"link-{s} (≥4.5:1 vs background)")
+    # focus ring: first candidate visible (≥3:1) against both the page and the surface
+    for cand in ("primary", "link", "on-surface"):
+        if cand in roles and contrast(roles[cand], bg) >= 3.0 and contrast(roles[cand], surface) >= 3.0:
+            put("focus-ring", roles[cand], f"{cand} (≥3:1 vs background and surface)")
+            break
     return roles, src
 
 
@@ -418,6 +505,9 @@ def collect_typography(root):
         if "headline" in cats and len(cats) > 1:
             LOG.warnings.append(f"Hierarchy collision: {', '.join(ks)} all use {size:g}px — "
                                 "different roles at the same size weaken visual hierarchy.")
+    tiny = [f"{k}={px(k):g}px" for k in out if 0 < px(k) < 12]
+    if tiny:
+        LOG.warnings.append("Text below 12px is hard to read on most displays (and worse for CJK): " + ", ".join(tiny) + ".")
     return out, sorted(families)
 
 
@@ -606,6 +696,9 @@ def build_components(roles, typo, rounded, radius_key, comp_padding, spacing, pa
     if "button-inverted" in roles:                       # explicit btnInvertedBg from the tokens
         comps["button-inverted"] = {"backgroundColor": "{colors.button-inverted}",
                                     "textColor": "{colors.on-button-inverted}", **btn}
+    comps["button-outlined"] = {"textColor": "{colors.%s}" % ("button-outlined-text" if "button-outlined-text" in roles
+                                                              else "primary"),
+                                **btn}     # transparent fill; the 1px `outline` border is a prose rule
     comps["input"] = {"backgroundColor": "{colors.surface-container-lowest}", "textColor": "{colors.on-surface}",
                       "typography": "{typography.%s}" % body, "rounded": r("input", "md"),
                       "padding": sp("sm", "md")}
@@ -613,7 +706,8 @@ def build_components(roles, typo, rounded, radius_key, comp_padding, spacing, pa
                      "rounded": r("card", "lg"),
                      "padding": f"{comp_padding['card']:g}px" if comp_padding.get("card") else spacing.get("lg")}
     if "subcard" in radius_key or "subcard" in comp_padding or "subcard" in comp_radius:
-        comps["card-nested"] = {"backgroundColor": "{colors.surface-container}", "textColor": "{colors.on-surface}",
+        nested_bg = "surface-raised" if "surface-raised" in roles else "surface-container"
+        comps["card-nested"] = {"backgroundColor": "{colors.%s}" % nested_bg, "textColor": "{colors.on-surface}",
                                 "rounded": r("subcard", "md"),
                                 "padding": f"{comp_padding['subcard']:g}px" if comp_padding.get("subcard") else spacing.get("md")}
     comps["checkbox"] = {"backgroundColor": "{colors.primary}",       # checked = solid fill, no check glyph
@@ -633,6 +727,9 @@ def build_components(roles, typo, rounded, radius_key, comp_padding, spacing, pa
                          "padding": sp("xs", "sm")}  # chip has no user-set radius -> stays on the global scale
     if "link" in roles:
         comps["link"] = {"textColor": "{colors.link}", "typography": "{typography.%s}" % body}
+    if "surface-raised" in roles and "card-nested" in comps:
+        LOG.inferred.append("`surfaceRaised` is used as the nested-card background (the tokens do not say which "
+                            "component it belongs to).")
     LOG.inferred.append("Component paddings / sizes not present in tokens were taken from the spacing scale "
                         "(button, input, chip padding; checkbox/radio size 20px"
                         + ("; slider track height 8px, thumb 24px" if "slider" in comp_radius else "") + ").")
@@ -675,7 +772,8 @@ def write_report(path, contrast_rows):
     sections = [("Errors (must fix)", LOG.errors), ("Repaired references", LOG.fixed_refs),
                 ("Renames, aliases & duplicates", LOG.aliases),
                 ("Inferred values (not in tokens — confirm with user or reference material)", LOG.inferred),
-                ("Warnings (design issues in the source tokens — report, do not silently change)", LOG.warnings)]
+                ("Warnings (design issues in the source tokens — report, do not silently change)", LOG.warnings),
+                ("Accepted by the user (deliberate — no action; state them as rules in DESIGN.md)", LOG.accepted)]
     for title, items in sections:
         L.append(f"## {title}")
         L += [f"- {i}" for i in items] or ["- none"]
@@ -694,7 +792,11 @@ def main():
     ap.add_argument("--default-mode", choices=["light", "dark"], default="light")
     ap.add_argument("--spacing-base", type=int, default=4)
     ap.add_argument("--palette-map", default="{}", help='JSON, e.g. {"primary-2":"secondary"}')
+    ap.add_argument("--accept", default="",
+                    help="comma list of deviations the user declared deliberate: contrast:<role>/<on-role> "
+                         "(mode prefix ignored, e.g. contrast:secondary/on-secondary) and border-conflict")
     a = ap.parse_args()
+    accept = {x.strip() for x in a.accept.split(",") if x.strip()}
 
     root = json.loads(Path(a.tokens).read_text(encoding="utf-8"))
     out = Path(a.out_dir)
@@ -769,15 +871,48 @@ def main():
     pairs += [(f"{alt_mode}-{x}", f"{alt_mode}-on-{x}") for x in alt if f"on-{x}" in alt]
     pairs += [("background", "on-surface-variant")] if "on-surface-variant" in roles else []
     rows = [(x, y, contrast(colors[x], colors[y])) for x, y in pairs if x in colors and y in colors]
+    accepted_contrast = set()
     for x, y, rt in rows:
         if rt < 4.5:
-            LOG.warnings.append(f"Contrast {x}/{y} = {rt}:1 is below WCAG AA 4.5:1 for text.")
+            key = norm_pair(x, y)
+            if f"contrast:{key}" in accept:
+                accepted_contrast.add(key)
+                LOG.accepted.append(f"Contrast {x}/{y} = {rt}:1 is below 4.5:1 — declared deliberate.")
+            else:
+                LOG.warnings.append(f"Contrast {x}/{y} = {rt}:1 is below WCAG AA 4.5:1 for text.")
 
     def shape_dim(key, default=None):
         n = shape.get(key)
         return dim(n["$value"]) if isinstance(n, dict) and "$value" in n else default
     border = shape.get("borderStrategy", {}).get("$value") if isinstance(shape.get("borderStrategy"), dict) else None
     bwidth = shape_dim("borderWidth", "1px")
+    no_border = str(border).lower() == "none" or (dim_px(bwidth) or 0) == 0
+    # Controls (input, outlined button, unchecked checkbox/radio) need a perceivable boundary even when the
+    # decorative border strategy is "none": they keep a 1px `outline` (borderStrong) edge.
+    control_bw = "1px" if no_border else bwidth
+    if no_border:
+        LOG.inferred.append("`borderStrategy` = none / borderWidth 0 → decorative borders (card, nested card, glass edge, "
+                            "dividers) are not drawn; control boundaries (input, outlined button, unchecked "
+                            "checkbox/radio) keep a 1px `outline` edge because they would otherwise be invisible.")
+        if elevation.get("strategy") == "glass" and elevation.get("requiresBorder"):
+            if "border-conflict" in accept:
+                LOG.accepted.append("`elevation.requiresBorder` = true (glass) with `shape.borderStrategy` = none / borderWidth 0 "
+                                    "— declared deliberate: glass cards have no edge and rely on the tonal step against the background.")
+            else:
+                LOG.warnings.append("Conflict: `elevation.requiresBorder` = true (glass) but `shape.borderStrategy` = none / "
+                                    "borderWidth 0. The shape setting wins in the preview, so glass cards have no edge and "
+                                    "rely on the tonal step against the background. Decide which one is intended.")
+        weak = [f"{n} {contrast(roles['outline-variant'], roles[n])}:1" for n in ("background", "surface")
+                if "outline-variant" in roles and n in roles and contrast(roles["outline-variant"], roles[n]) < 1.5]
+        if weak:
+            LOG.inferred.append("Even if used, the decorative `border` color is almost invisible here (" + ", ".join(weak) + ").")
+    # explicit palette fills that hardly separate from the page
+    for label, rs in ((f"{main_mode}-mode", roles), (f"{alt_mode}-mode", alt)):
+        low = [f"{r_} {contrast(rs[r_], rs['background'])}:1" for r_ in ("primary", "secondary", "tertiary")
+               if r_ in rs and "background" in rs and contrast(rs[r_], rs["background"]) < 3.0]
+        if low:
+            LOG.warnings.append(f"{label}: fills below 3:1 against `background` (" + ", ".join(low) + "): buttons in these "
+                                "colors will barely separate from the page (WCAG 1.4.11 needs 3:1 for UI boundaries).")
     meta = {k: v for k, v in (root.get("meta") or {}).items() if not isinstance(v, (dict, list))}
     if str(meta.get("a11yStatus", "pass")).lower() != "pass" or meta.get("a11yFailCount"):
         LOG.warnings.append(f"Source tokens report a11yStatus={meta.get('a11yStatus')} "
@@ -791,10 +926,12 @@ def main():
         "fontWeights": sorted({e.get("fontWeight", 400) for e in typo.values()}),
         "elevation": elevation,
         "shape": {"cornerStrategy": corner, "borderStrategy": border, "borderWidth": bwidth,
+                  "controlBorderWidth": control_bw,
                   "subcardBorderWidth": shape_dim("subcardBorderWidth", bwidth),
                   "hybridRadius": hybrid,
                   "componentRadius": comp_radius, "componentPadding": comp_padding, "radiusKey": radius_key,
                   "componentElevation": comp_elev},
+        "accepted": {"contrast": sorted(accepted_contrast), "borderConflict": "border-conflict" in accept},
         "colorSource": csrc,
         "paletteNames": list(palettes.keys()),
         "paletteDiffersInAlt": differing,

@@ -37,7 +37,8 @@ REF_RE = re.compile(r"\{([A-Za-z0-9_.\-]+)\}")
 KNOWN_COMPONENT_PROPS = {"backgroundColor", "textColor", "typography", "rounded", "padding",
                          "size", "height", "width"}
 
-errors, warns = [], []
+errors, warns, infos = [], [], []
+ACCEPT_CONTRAST = set()     # role pairs the user declared deliberate, e.g. "secondary/on-secondary"
 
 
 def err(m):
@@ -143,7 +144,11 @@ def check_contrast(fm):
         if on in colors:
             a, b = resolve_color(fm, colors[k]), resolve_color(fm, colors[on])
             if a and b and contrast(a, b) < 4.5:
-                err(f"Contrast {k}/{on} = {contrast(a, b)}:1 < 4.5:1")
+                pair = re.sub(r"^(dark|light)-", "", k) + "/" + re.sub(r"^(dark|light)-", "", on)
+                if pair in ACCEPT_CONTRAST:
+                    infos.append(f"Contrast {k}/{on} = {contrast(a, b)}:1 < 4.5:1 (accepted as deliberate)")
+                else:
+                    err(f"Contrast {k}/{on} = {contrast(a, b)}:1 < 4.5:1")
     for cname, props in (fm.get("components") or {}).items():
         bg, fg = props.get("backgroundColor"), props.get("textColor")
         if bg and fg:
@@ -192,7 +197,17 @@ def check_body(fm, body):
 
 
 def main():
-    path = Path(sys.argv[1])
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("path")
+    ap.add_argument("--extras", help="work/extras.json; its `accepted.contrast` pairs are not reported as errors")
+    ap.add_argument("--accept-contrast", default="", help="comma list of role pairs, e.g. secondary/on-secondary")
+    a = ap.parse_args()
+    if a.extras and Path(a.extras).exists():
+        import json
+        ACCEPT_CONTRAST.update(json.loads(Path(a.extras).read_text(encoding="utf-8")).get("accepted", {}).get("contrast", []))
+    ACCEPT_CONTRAST.update(x.strip() for x in a.accept_contrast.split(",") if x.strip())
+    path = Path(a.path)
     text = path.read_text(encoding="utf-8")
     fm_text, body = split(text)
     if fm_text is not None:
@@ -207,9 +222,11 @@ def main():
         check_body(fm, body)
     for w in warns:
         print("WARN ", w)
+    for i in infos:
+        print("INFO ", i)
     for e in errors:
         print("ERROR", e)
-    print(f"\n{path.name}: {len(errors)} error(s), {len(warns)} warning(s)")
+    print(f"\n{path.name}: {len(errors)} error(s), {len(warns)} warning(s)" + (f", {len(infos)} accepted" if infos else ""))
     sys.exit(1 if errors else 0)
 
 
